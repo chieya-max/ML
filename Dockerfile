@@ -19,5 +19,6 @@ COPY . .
 # expose port (railway handles actual routing)
 EXPOSE 8000
 
-# start FastAPI app
-CMD sh -c "uvicorn ml_api:app --host 0.0.0.0 --port $PORT"
+# start FastAPI via entrypoint script
+CMD ["./start.sh"]
+
