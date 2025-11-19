@@ -123,6 +123,33 @@ async def get_routes():
         })
     return routes
 
+@app.post("/test_predict")
+async def test_predict(request: PredictionRequest):
+    """Test endpoint to debug prediction issues"""
+    try:
+        print("🔍 Received prediction request:", request.dict())
+        
+        input_data = {
+            'time': request.time or datetime.now().isoformat(),
+            'dosage': request.dosage,
+            'cbg': request.cbg,
+            'cbg_pre_meal': request.cbg,
+            'carbohydrates_estimation': request.carbohydrates_estimation,
+            'rice_cups': request.rice_cups,
+            'meal_type': request.meal_type
+        }
+        
+        print("📦 Processed input data:", input_data)
+        
+        # Test the predictor
+        result = predictor.predict(request.patient_id, input_data)
+        print("✅ Prediction result:", result)
+        
+        return {"status": "success", "test_prediction": result}
+    except Exception as e:
+        print("❌ Prediction error:", str(e))
+        raise HTTPException(status_code=400, detail=f"Test prediction failed: {str(e)}")
+
 # For Railway deployment
 
 if __name__ == "__main__":
