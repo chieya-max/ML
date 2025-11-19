@@ -20,5 +20,4 @@ COPY . .
 EXPOSE 8000
 
 # start FastAPI via entrypoint script
-CMD ["./start.sh"]
-
+CMD ["python", "ml_api.py"]
