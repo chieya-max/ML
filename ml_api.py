@@ -119,5 +119,6 @@ async def get_model_status(patient_id: str):
 # For Railway deployment
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8000))  # default 8000 if PORT not set
+    # Read Railway's PORT env variable, default to 8000
+    port = int(os.environ.get("PORT", 8000))
     uvicorn.run("ml_api:app", host="0.0.0.0", port=port)
