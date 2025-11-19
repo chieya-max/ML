@@ -21,3 +21,4 @@ EXPOSE 8000
 
 # start FastAPI via entrypoint script
 CMD ["python", "ml_api.py"]
+
