@@ -159,6 +159,39 @@ async def test_predict(request: PredictionRequest):
         print("❌ Prediction error:", str(e))
         raise HTTPException(status_code=400, detail=f"Test prediction failed: {str(e)}")
 
+@app.middleware("http")
+async def debug_middleware(request: Request, call_next):
+    print(f"🔍 Incoming request: {request.method} {request.url}")
+    print(f"📦 Headers: {dict(request.headers)}")
+    
+    if request.method == "POST" and "/predict" in str(request.url):
+        body = await request.body()
+        print(f"📝 Request body: {body.decode()}")
+    
+    response = await call_next(request)
+    print(f"📡 Response status: {response.status_code}")
+    return response
+
+@app.post("/debug_predict")
+async def debug_predict(request: PredictionRequest):
+    """Debug endpoint to see if the issue is with the model"""
+    try:
+        print("🎯 Debug endpoint called successfully")
+        print(f"📦 Received data: {request.dict()}")
+        
+        # Return a simple success response to test if the endpoint works
+        return {
+            "patient_id": request.patient_id,
+            "predicted_glucose": 150.0,  # Mock data
+            "prediction_timestamp": datetime.now().isoformat(),
+            "model_confidence": "High",
+            "expected_accuracy": "±10 mg/dL",
+            "debug": True
+        }
+    except Exception as e:
+        print(f"❌ Debug endpoint error: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
+
 # For Railway deployment
 
 if __name__ == "__main__":
