@@ -117,8 +117,7 @@ async def get_model_status(patient_id: str):
         raise HTTPException(status_code=400, detail=str(e))
 
 # For Railway deployment
+
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8000))
-    uvicorn.run(app, host="0.0.0.0", port=port)
-
-
+    port = int(os.environ.get("PORT", 8000))  # default 8000 if PORT not set
+    uvicorn.run("ml_api:app", host="0.0.0.0", port=port)
