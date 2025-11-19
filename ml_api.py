@@ -192,6 +192,22 @@ async def debug_predict(request: PredictionRequest):
         print(f"❌ Debug endpoint error: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
 
+@app.get("/simple_test")
+async def simple_test():
+    return {"message": "Simple test works", "timestamp": datetime.now().isoformat()}
+
+@app.post("/simple_post_test")
+async def simple_post_test(data: dict):
+    return {"message": "POST test works", "received_data": data}
+
+@app.get("/")
+async def root():
+    return {
+        "message": "Glucose Prediction API is running!",
+        "status": "healthy",
+        "timestamp": datetime.now().isoformat()
+    }
+
 # For Railway deployment
 
 if __name__ == "__main__":
