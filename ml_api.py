@@ -112,6 +112,17 @@ async def get_model_status(patient_id: str):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+@app.get("/routes")
+async def get_routes():
+    routes = []
+    for route in app.routes:
+        routes.append({
+            "path": route.path,
+            "name": route.name,
+            "methods": list(route.methods) if hasattr(route, 'methods') else []
+        })
+    return routes
+
 # For Railway deployment
 
 if __name__ == "__main__":
