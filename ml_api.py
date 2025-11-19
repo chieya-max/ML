@@ -80,6 +80,8 @@ async def health_check():
 async def predict_glucose(request: PredictionRequest):
     """Make glucose prediction"""
     try:
+        print(f"🎯 Received prediction request for patient: {request.patient_id}")
+        
         input_data = {
             'time': request.time or datetime.now().isoformat(),
             'dosage': request.dosage,
@@ -90,9 +92,16 @@ async def predict_glucose(request: PredictionRequest):
             'meal_type': request.meal_type
         }
         
+        print(f"📦 Input data: {input_data}")
+        
         result = predictor.predict(request.patient_id, input_data)
+        print(f"✅ Prediction successful: {result}")
+        
         return result
     except Exception as e:
+        print(f"❌ Prediction error: {str(e)}")
+        import traceback
+        print(f"🔍 Stack trace: {traceback.format_exc()}")
         raise HTTPException(status_code=400, detail=str(e))
 
 @app.post("/train/{patient_id}", response_model=TrainingResponse)
