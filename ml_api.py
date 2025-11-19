@@ -6,6 +6,7 @@ from typing import Dict, Optional
 import uvicorn
 import os
 from datetime import datetime
+app = FastAPI()
 
 # Import your ML pipeline
 try:
@@ -115,3 +116,7 @@ async def get_model_status(patient_id: str):
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     uvicorn.run(app, host="0.0.0.0", port=port)
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
