@@ -27,13 +27,13 @@ app = FastAPI(
 def health():
     return {"status": "ok"}
     
-# CORS middleware - allow your React app domain
+# In ml_api.py - update CORS settings
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # For development
+    allow_origins=["*"],  # Allow all origins for testing
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["*"],  # Allow all methods
+    allow_headers=["*"],  # Allow all headers
 )
 
 # Initialize predictor
