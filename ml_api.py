@@ -30,11 +30,7 @@ def health():
 # CORS middleware - allow your React app domain
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",  # Local development
-        "https://your-react-app.vercel.app",  # Your deployed React app
-        "*"  # Remove this in production for security
-    ],
+    allow_origins=["*"],  # For development
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
