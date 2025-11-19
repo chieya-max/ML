@@ -6,7 +6,7 @@ from typing import Dict, Optional
 import uvicorn
 import os
 from datetime import datetime
-app = FastAPI()
+
 
 # Import your ML pipeline
 try:
