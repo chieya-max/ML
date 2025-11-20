@@ -1,5 +1,5 @@
 # ml_api.py
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Dict, Optional
@@ -7,39 +7,39 @@ import uvicorn
 import os
 from datetime import datetime
 
-
-# Import your ML pipeline
+# Import ML pipeline
 try:
     from glucose_pipeline import GlucosePredictor
 except ImportError:
-    # For Railway deployment
     import sys
     sys.path.append('/app')
     from glucose_pipeline import GlucosePredictor
 
 app = FastAPI(
     title="Glucose Prediction API",
-    description="ML API for predicting post-meal glucose levels",
+    description="ML API for predicting glucose levels",
     version="1.0.0"
 )
 
-@app.get("/health")
-def health():
-    return {"status": "ok"}
-    
-# In ml_api.py - update CORS settings
+# -------------------------------------------------
+# CORS CONFIG (Fix for frontend CORS blocking)
+# -------------------------------------------------
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins for testing
+    allow_origins=["*"],    # Allow everything for now
     allow_credentials=True,
-    allow_methods=["*"],  # Allow all methods
-    allow_headers=["*"],  # Allow all headers
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
-# Initialize predictor
+# -------------------------------------------------
+# Initialize ML predictor
+# -------------------------------------------------
 predictor = GlucosePredictor()
 
-# Request/Response models
+# -------------------------------------------------
+# MODELS
+# -------------------------------------------------
 class PredictionRequest(BaseModel):
     patient_id: str
     dosage: float
@@ -63,7 +63,25 @@ class TrainingResponse(BaseModel):
     metrics: Optional[Dict] = None
     message: Optional[str] = None
 
-# Health check endpoint
+# -------------------------------------------------
+# MIDDLEWARE DEBUG LOGGER
+# (This was broken due to missing import -- NOW FIXED)
+# -------------------------------------------------
+@app.middleware("http")
+async def debug_middleware(request: Request, call_next):
+    print(f"🔍 Incoming: {request.method} {request.url}")
+
+    if request.method == "POST" and "/predict" in str(request.url):
+        body = await request.body()
+        print(f"📝 Body: {body.decode()}")
+
+    response = await call_next(request)
+    print(f"📡 Status: {response.status_code}")
+    return response
+
+# -------------------------------------------------
+# ROUTES
+# -------------------------------------------------
 @app.get("/")
 async def root():
     return {
@@ -78,10 +96,9 @@ async def health_check():
 
 @app.post("/predict", response_model=PredictionResponse)
 async def predict_glucose(request: PredictionRequest):
-    """Make glucose prediction"""
     try:
-        print(f"🎯 Received prediction request for patient: {request.patient_id}")
-        
+        print(f"🎯 Prediction request for patient: {request.patient_id}")
+
         input_data = {
             'time': request.time or datetime.now().isoformat(),
             'dosage': request.dosage,
@@ -91,31 +108,27 @@ async def predict_glucose(request: PredictionRequest):
             'rice_cups': request.rice_cups,
             'meal_type': request.meal_type
         }
-        
-        print(f"📦 Input data: {input_data}")
-        
+
+        print(f"📦 Input: {input_data}")
+
         result = predictor.predict(request.patient_id, input_data)
         print(f"✅ Prediction successful: {result}")
-        
+
         return result
+
     except Exception as e:
         print(f"❌ Prediction error: {str(e)}")
-        import traceback
-        print(f"🔍 Stack trace: {traceback.format_exc()}")
         raise HTTPException(status_code=400, detail=str(e))
 
 @app.post("/train/{patient_id}", response_model=TrainingResponse)
 async def train_model(patient_id: str):
-    """Train model for specific patient"""
     try:
-        result = predictor.train_patient_model(patient_id)
-        return result
+        return predictor.train_patient_model(patient_id)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 @app.get("/status/{patient_id}")
 async def get_model_status(patient_id: str):
-    """Get model status"""
     try:
         return predictor.get_status(patient_id)
     except Exception as e:
@@ -123,94 +136,23 @@ async def get_model_status(patient_id: str):
 
 @app.get("/routes")
 async def get_routes():
-    routes = []
-    for route in app.routes:
-        routes.append({
+    return [
+        {
             "path": route.path,
             "name": route.name,
-            "methods": list(route.methods) if hasattr(route, 'methods') else []
-        })
-    return routes
-
-@app.post("/test_predict")
-async def test_predict(request: PredictionRequest):
-    """Test endpoint to debug prediction issues"""
-    try:
-        print("🔍 Received prediction request:", request.dict())
-        
-        input_data = {
-            'time': request.time or datetime.now().isoformat(),
-            'dosage': request.dosage,
-            'cbg': request.cbg,
-            'cbg_pre_meal': request.cbg,
-            'carbohydrates_estimation': request.carbohydrates_estimation,
-            'rice_cups': request.rice_cups,
-            'meal_type': request.meal_type
+            "methods": list(getattr(route, "methods", []))
         }
-        
-        print("📦 Processed input data:", input_data)
-        
-        # Test the predictor
-        result = predictor.predict(request.patient_id, input_data)
-        print("✅ Prediction result:", result)
-        
-        return {"status": "success", "test_prediction": result}
-    except Exception as e:
-        print("❌ Prediction error:", str(e))
-        raise HTTPException(status_code=400, detail=f"Test prediction failed: {str(e)}")
+        for route in app.routes
+    ]
 
-@app.middleware("http")
-async def debug_middleware(request: Request, call_next):
-    print(f"🔍 Incoming request: {request.method} {request.url}")
-    print(f"📦 Headers: {dict(request.headers)}")
-    
-    if request.method == "POST" and "/predict" in str(request.url):
-        body = await request.body()
-        print(f"📝 Request body: {body.decode()}")
-    
-    response = await call_next(request)
-    print(f"📡 Response status: {response.status_code}")
-    return response
-
-@app.post("/debug_predict")
-async def debug_predict(request: PredictionRequest):
-    """Debug endpoint to see if the issue is with the model"""
-    try:
-        print("🎯 Debug endpoint called successfully")
-        print(f"📦 Received data: {request.dict()}")
-        
-        # Return a simple success response to test if the endpoint works
-        return {
-            "patient_id": request.patient_id,
-            "predicted_glucose": 150.0,  # Mock data
-            "prediction_timestamp": datetime.now().isoformat(),
-            "model_confidence": "High",
-            "expected_accuracy": "±10 mg/dL",
-            "debug": True
-        }
-    except Exception as e:
-        print(f"❌ Debug endpoint error: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
-
-@app.get("/simple_test")
-async def simple_test():
-    return {"message": "Simple test works", "timestamp": datetime.now().isoformat()}
-
+# Debug POST test
 @app.post("/simple_post_test")
-async def simple_post_test(data: dict):
-    return {"message": "POST test works", "received_data": data}
+async def simple_post(data: dict):
+    return {"message": "POST test works", "data": data}
 
-@app.get("/")
-async def root():
-    return {
-        "message": "Glucose Prediction API is running!",
-        "status": "healthy",
-        "timestamp": datetime.now().isoformat()
-    }
-
-# For Railway deployment
-
+# -------------------------------------------------
+# RAILWAY ENTRY POINT
+# -------------------------------------------------
 if __name__ == "__main__":
-    # Read Railway's PORT env variable, default to 8000
     port = int(os.environ.get("PORT", 8000))
     uvicorn.run("ml_api:app", host="0.0.0.0", port=port)
